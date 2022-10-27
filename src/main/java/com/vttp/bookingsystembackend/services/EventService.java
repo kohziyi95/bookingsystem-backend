@@ -11,16 +11,21 @@ import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Service;
 
 import com.vttp.bookingsystembackend.models.EventDetails;
+import com.vttp.bookingsystembackend.repositories.EventRepository;
 
 @Service
 public class EventService {
     @Autowired
     private JdbcTemplate template;
 
+    @Autowired
+    private EventRepository eventRepo;
+
     private static final String SQL_INSERT_EVENT = "insert into events(title, description, date, days, startDate, endDate, startTime, endTime, price, capacity, image) values (?,?,?,?,?,?,?,?,?,?,?)";
     private static final String SQL_GET_ALL_SINGLE_DAY_EVENT = "select * from events where days = 'single'";
     private static final String SQL_GET_ALL_MULTIPLE_DAY_EVENT = "select * from events where days = 'multiple'";
-    public static final String SQL_GET_IMAGE = "select image from events where id = ?";
+    public static final String SQL_GET_IMAGE_BY_ID = "select image from events where id = ?";
+    private static final String SQL_GET_ALL_EVENTS = "select * from events";
 
     public int insertEvent(EventDetails event) throws Exception {
         int updated = 0;
@@ -28,7 +33,7 @@ public class EventService {
             updated = template.update(SQL_INSERT_EVENT,
                     event.getTitle(),
                     event.getDescription(),
-                    "N/A",
+                    event.getStartDate(),
                     event.getDays(),
                     event.getStartDate(),
                     event.getEndDate(),
@@ -55,36 +60,34 @@ public class EventService {
     }
 
     public List<EventDetails> getAllSingleEvent() {
-        List<EventDetails> eventList = new ArrayList<>();
-        SqlRowSet rowSet = template.queryForRowSet(SQL_GET_ALL_SINGLE_DAY_EVENT);
-        while (rowSet.next()) {
-            EventDetails event = EventDetails.createEvent(rowSet);
-            byte[] image = getImage(event.getId()).get();
-            // System.out.println("Getting image >>> " + image);
-            event.setImage(image);
-            eventList.add(event);
-        }
+        List<EventDetails> eventList = eventRepo.getEvents(SQL_GET_ALL_SINGLE_DAY_EVENT);
         return eventList;
     }
 
-    public Optional<byte[]> getImage(Integer id) {
-        return template.query(SQL_GET_IMAGE,
-                (ResultSet rs) -> {
-                    if (!rs.next())
-                        return Optional.empty();
-                    return Optional.of(rs.getBytes("image"));
-                },
-                id);
-
-    }
+    // public Optional<byte[]> getImageById(Integer id) {
+    //     return template.query(SQL_GET_IMAGE_BY_ID,
+    //             (ResultSet rs) -> {
+    //                 if (!rs.next())
+    //                     return Optional.empty();
+    //                 return Optional.of(rs.getBytes("image"));
+    //             },
+    //             id);
+    // }
 
     public List<EventDetails> getAllMultipleEvent() {
-        List<EventDetails> eventList = new ArrayList<>();
-        SqlRowSet rowSet = template.queryForRowSet(SQL_GET_ALL_MULTIPLE_DAY_EVENT);
-        while (rowSet.next()) {
-            eventList.add(EventDetails.createEvent(rowSet));
-        }
+        List<EventDetails> eventList = eventRepo.getEvents(SQL_GET_ALL_MULTIPLE_DAY_EVENT);
         return eventList;
+    }
+
+    public List<EventDetails> getAllEvents() {
+        List<EventDetails> eventList = eventRepo.getEvents(SQL_GET_ALL_EVENTS);
+
+        return eventList;
+    }
+
+    public boolean deleteEvent(Integer id){
+        int deleted = eventRepo.deleteEvents(id);
+        return deleted >= 1;
     }
 
 }

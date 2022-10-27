@@ -10,7 +10,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,21 +33,46 @@ public class PublicController {
 
     @GetMapping("/event/single")
     public ResponseEntity<String> getSingleEvent() {
-        // if (days.equals("single")) {
-            List<EventDetails> eventList = eventSvc.getAllSingleEvent();
-            JsonArrayBuilder builder = Json.createArrayBuilder();
-            eventList.forEach(e -> {
-                builder.add(e.toJson());
-            });
-            // System.out.println(builder.build().toString());
-            return ResponseEntity.ok(builder.build().toString());
-        // } else if (days.equals("multiple")) {
+        List<EventDetails> eventList = eventSvc.getAllSingleEvent();
+        JsonArrayBuilder builder = Json.createArrayBuilder();
+        eventList.forEach(e -> {
+            builder.add(e.toJson());
+            // System.out.println(e.getId());
+        });
+        // System.out.println(builder.build().toString());
+        return ResponseEntity.ok(builder.build().toString());
+    }
 
-        //     return ResponseEntity.badRequest().body("null");
+    @GetMapping("/event/all")
+    public ResponseEntity<String> getAllEvents() {
+        List<EventDetails> eventList = eventSvc.getAllEvents();
+        JsonArrayBuilder builder = Json.createArrayBuilder();
+        eventList.forEach(e -> {
+            builder.add(e.toJson());
+        });
+        // System.out.println(builder.build().toString());
+        return ResponseEntity.ok(builder.build().toString());
+    }
 
-        // } else {
-        //     return ResponseEntity.badRequest().body("null");
-        // }
+    @GetMapping("/event/multiple")
+    public ResponseEntity<String> getMultipleDayEvents() {
+        List<EventDetails> eventList = eventSvc.getAllMultipleEvent();
+        JsonArrayBuilder builder = Json.createArrayBuilder();
+        eventList.forEach(e -> {
+            builder.add(e.toJson());
+        });
+        // System.out.println(builder.build().toString());
+        return ResponseEntity.ok(builder.build().toString());
+    }
+
+    @DeleteMapping("/event/{id}")
+    public ResponseEntity<String> deleteEventById(@PathVariable Integer id){
+        System.out.println("Deleting id >>>>> " + id);
+        if (eventSvc.deleteEvent(id)){
+            return ResponseEntity.ok(id.toString());
+        } else {
+            return ResponseEntity.badRequest().body("Error. Failed to delete event.");
+        }
 
     }
 }

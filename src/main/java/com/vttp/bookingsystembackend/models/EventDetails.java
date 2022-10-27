@@ -90,6 +90,9 @@ public class EventDetails {
                 .add("price", price)
                 .add("capacity", capacity)
                 .add("image", Base64.encodeBase64String(image));
+        if (this.id != null) {
+            builder.add("id", id);
+        }
         if (this.days.equals("multiple")) {
             builder.add("startDate", startDate)
                     .add("endDate", endDate);
