@@ -24,6 +24,9 @@ public class EventDetails {
     private Float price;
     private Integer capacity;
     private byte[] image;
+    private Integer bookingCount;
+
+
 
     public static EventDetails createEvent(String json) {
         JsonReader reader = Json.createReader(new StringReader(json));
@@ -34,6 +37,13 @@ public class EventDetails {
         } else {
             return createSingleDayEvent(data);
         }
+    }
+
+    public static byte[] getImageFromBase64(String json) {
+        JsonReader reader = Json.createReader(new StringReader(json));
+        JsonObject data = reader.readObject();
+        String base64ImageString = data.getString("image");
+        return Base64.decodeBase64(base64ImageString);
     }
 
     public static EventDetails createEvent(SqlRowSet rowSet) {
@@ -59,6 +69,12 @@ public class EventDetails {
 
     private static EventDetails createSingleDayEvent(JsonObject data) {
         EventDetails e = new EventDetails();
+        try {
+            e.setId(data.getInt("id"));
+        } catch (Exception ex) {
+            // TODO: handle exception
+            ex.getMessage();
+        }
         e.setTitle(data.getString("title"));
         e.setDescription(data.getString("description"));
         e.setDays(data.getString("days"));
@@ -72,6 +88,11 @@ public class EventDetails {
 
     private static EventDetails createMultipleDayEvent(JsonObject data) {
         EventDetails e = new EventDetails();
+        try {
+            e.setId(data.getInt("id"));
+        } catch (Exception ex) {
+            ex.getMessage();
+        }
         e.setTitle(data.getString("title"));
         e.setDescription(data.getString("description"));
         e.setDays(data.getString("days"));
@@ -89,7 +110,8 @@ public class EventDetails {
                 .add("days", days)
                 .add("price", price)
                 .add("capacity", capacity)
-                .add("image", Base64.encodeBase64String(image));
+                .add("image", Base64.encodeBase64String(image))
+                .add("bookingCount", bookingCount);
         if (this.id != null) {
             builder.add("id", id);
         }
@@ -102,8 +124,8 @@ public class EventDetails {
                     .add("endTime", endTime);
         }
         return builder.build();
-
     }
+
 
     public Integer getId() {
         return id;
@@ -199,6 +221,14 @@ public class EventDetails {
 
     public void setImage(byte[] image) {
         this.image = image;
+    }
+
+    public Integer getBookingCount() {
+        return bookingCount;
+    }
+
+    public void setBookingCount(Integer bookingCount) {
+        this.bookingCount = bookingCount;
     }
 
 }

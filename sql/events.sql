@@ -14,3 +14,5 @@ image mediumblob,
 price float,
 capacity int
 );
+
+
