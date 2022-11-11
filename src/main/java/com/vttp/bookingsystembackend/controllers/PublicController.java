@@ -59,6 +59,7 @@ public class PublicController {
             e.printStackTrace();
             return ResponseEntity.badRequest().body("Failed to get event.");
         }
+        event.setBookingCount(eventSvc.getBookingCount(id));
         return ResponseEntity.ok(event.toJson().toString());
     }
 
@@ -72,6 +73,7 @@ public class PublicController {
         }
         JsonArrayBuilder builder = Json.createArrayBuilder();
         eventList.forEach(e -> {
+            e.setBookingCount(eventSvc.getBookingCount(e.getId()));
             builder.add(e.toJson());
             // System.out.println(e.getId());
         });
@@ -89,6 +91,7 @@ public class PublicController {
         }
         JsonArrayBuilder builder = Json.createArrayBuilder();
         eventList.forEach(e -> {
+            e.setBookingCount(eventSvc.getBookingCount(e.getId()));
             builder.add(e.toJson());
         });
         // System.out.println(builder.build().toString());
@@ -105,6 +108,7 @@ public class PublicController {
         }
         JsonArrayBuilder builder = Json.createArrayBuilder();
         eventList.forEach(e -> {
+            e.setBookingCount(eventSvc.getBookingCount(e.getId()));
             builder.add(e.toJson());
         });
         // System.out.println(builder.build().toString());

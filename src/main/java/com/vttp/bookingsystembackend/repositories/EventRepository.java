@@ -27,7 +27,8 @@ public class EventRepository {
     public static final String SQL_GET_EVENT_BY_ID = "select * from events where id = ?";
     public static final String SQL_GET_EVENT_CAPACITY = "select capacity from events where id = ?";
     public static final String SQL_GET_EVENT_BY_BOOKING_ID = "select * from event_bookings join events on event_bookings.event_id = events.id where booking_id = ?";
-    
+    public static final String SQL_GET_LATEST_EVENT_BY_TITLE = "select * from events where title = ? order by date_created desc limit 1";
+
     public static final String SQL_INSERT_BOOKING = "insert into event_bookings(booking_id, user_id, event_id) values (? ,? ,?)";
     public static final String SQL_GET_BOOKING_COUNT_BY_EVENT_ID = "select count(*) as count from event_bookings where event_id = ?";
     public static final String SQL_GET_BOOKING_COUNT_BY_USER_ID_AND_EVENT_ID = "select count(*) as count from event_bookings where user_id = ? and event_id = ? ";
@@ -86,6 +87,28 @@ public class EventRepository {
         // }
         EventDetails event = new EventDetails();
         SqlRowSet rowSet = template.queryForRowSet(SQL_GET_EVENT_BY_ID, id);
+        while (rowSet.next()) {
+            event = EventDetails.createEvent(rowSet);
+            byte[] image = getImageById(event.getId()).get();
+            // System.out.println("Getting image >>> " + image);
+            event.setImage(image);
+            event.setBookingCount(getBookingCount(event.getId()));
+        }
+        return event;
+    }
+
+    public EventDetails getLatestEventByTitle(String title) throws Exception {
+        // EventDetails e = template.queryForObject(SQL_GET_EVENT_BY_ID,
+        // EventDetails.class);
+        // Optional<byte[]> opt = getImageById(id);
+        // if (opt.isEmpty()) {
+        // throw new Exception();
+        // } else {
+        // byte[] image = opt.get();
+        // e.setImage(image);
+        // }
+        EventDetails event = new EventDetails();
+        SqlRowSet rowSet = template.queryForRowSet(SQL_GET_LATEST_EVENT_BY_TITLE, title);
         while (rowSet.next()) {
             event = EventDetails.createEvent(rowSet);
             byte[] image = getImageById(event.getId()).get();

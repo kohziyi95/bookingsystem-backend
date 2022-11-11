@@ -43,7 +43,7 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> addEvent(@RequestPart String eventDetails, @RequestPart MultipartFile image) {
 
-        System.out.println("Event Details Received >>>" + eventDetails);
+        logger.log(Level.INFO,"Event Details Received >>>" + eventDetails);
 
         EventDetails event = EventDetails.createEvent(eventDetails);
         try {
@@ -52,11 +52,11 @@ public class AdminController {
             e.printStackTrace();
             return ResponseEntity.badRequest().body(e.getMessage());
         }
-        System.out.println("Event Adding >>>" + event.toJson().toString());
+        // System.out.println("Event Adding >>>" + event.toJson().toString());
 
         try {
             int updated = eventSvc.insertEvent(event);
-            System.out.printf("updated: %d\n", updated);
+            logger.log(Level.INFO,String.format("updated: %d\n", updated));
         } catch (Exception ex) {
             ex.printStackTrace();
             return ResponseEntity.badRequest().body(ex.getMessage());
@@ -77,12 +77,13 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> editEvent(@RequestPart String eventDetails) {
 
-        System.out.println("Event Details Received >>>" + eventDetails);
+        // System.out.println("Event Details Received >>>" + eventDetails);
 
         EventDetails event = EventDetails.createEvent(eventDetails);
         event.setImage(EventDetails.getImageFromBase64(eventDetails));
+        event.setBookingCount(eventSvc.getBookingCount(event.getId()));
 
-        System.out.println("Event Updating >>>" + event.toJson().toString());
+       logger.log(Level.INFO,"Event Updating >>>" + event.getTitle());
 
         // if (image.isEmpty()){
         // try {
@@ -95,7 +96,7 @@ public class AdminController {
 
         try {
             int updated = eventSvc.editEvent(event);
-            System.out.printf("updated: %d\n", updated);
+            logger.log(Level.INFO,String.format("updated: %d\n", updated));
         } catch (Exception ex) {
             ex.printStackTrace();
             return ResponseEntity.badRequest().body(ex.getMessage());
@@ -134,7 +135,7 @@ public class AdminController {
             System.out.println("Event Updating Before Image >>>" + event.toJson().toString());
 
             int updated = eventSvc.editEvent(event);
-            System.out.printf("updated: %d\n", updated);
+            logger.log(Level.INFO,String.format("updated: %d\n", updated));
         } catch (Exception ex) {
             ex.printStackTrace();
             return ResponseEntity.badRequest().body(ex.getMessage());

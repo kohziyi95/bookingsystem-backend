@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import javax.sql.DataSource;
 
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.vttp.bookingsystembackend.models.EventBooking;
 import com.vttp.bookingsystembackend.models.EventDetails;
+import com.vttp.bookingsystembackend.repositories.EventRedisRepository;
 import com.vttp.bookingsystembackend.repositories.EventRepository;
 
 @Service
@@ -36,6 +38,9 @@ public class EventService {
     private EventRepository eventRepo;
 
     @Autowired
+    private EventRedisRepository eventRedisRepo;
+
+    @Autowired
     private TransactionService transactionService;
 
     private static final String SQL_INSERT_EVENT = "insert into events(title, description, date, days, startDate, endDate, startTime, endTime, price, capacity, image) values (?,?,?,?,?,?,?,?,?,?,?)";
@@ -44,6 +49,64 @@ public class EventService {
     public static final String SQL_GET_IMAGE_BY_ID = "select image from events where id = ?";
     private static final String SQL_GET_ALL_EVENTS = "select * from events";
     private static final String SQL_UPDATE_EVENT_BY_ID = "update events set title = ?, description = ?, date = ?, days = ?, startDate = ?, endDate = ?, startTime = ?, endTime = ?, price = ?, capacity = ?, image = ? where id = ?";
+
+    public EventDetails getEvent(Integer id) throws Exception {
+        return eventRepo.getEventById(id);
+    }
+
+    public List<EventDetails> getAllEvents() throws Exception {
+        List<EventDetails> eventList = new ArrayList<>();
+        if (eventRedisRepo.count() >= 1) {
+            eventList = (List<EventDetails>) eventRedisRepo.findAll();
+            logger.log(Level.INFO,
+                    String.format("Retrieved %d events from REDIS", eventList.size()));
+        } else {
+            eventList = eventRepo.getEvents(SQL_GET_ALL_EVENTS);
+            ;
+            logger.log(Level.INFO,
+                    String.format("Retrieved %d events from MYSQL", eventList.size()));
+            eventList.forEach(e -> eventRedisRepo.save(e));
+        }
+        return eventList;
+    }
+
+    public List<EventDetails> getAllSingleEvent() throws Exception {
+        List<EventDetails> eventList = new ArrayList<>();
+        if (eventRedisRepo.count() >= 1) {
+            eventList = (List<EventDetails>) eventRedisRepo.findAll();
+            List<EventDetails> filteredList = eventList.stream().filter(e -> e.getDays().equals("single"))
+                    .collect(Collectors.toList());
+            eventList = filteredList;
+            logger.log(Level.INFO,
+                    String.format("Retrieved %d single day events from REDIS", filteredList.size()));
+        } else {
+            eventList = eventRepo.getEvents(SQL_GET_ALL_SINGLE_DAY_EVENT);
+            logger.log(Level.INFO,
+                    String.format("Retrieved %d single day events from MYSQL", eventList.size()));
+            eventList.forEach(e -> eventRedisRepo.save(e));
+
+        }
+        return eventList;
+    }
+
+    public List<EventDetails> getAllMultipleEvent() throws Exception {
+        List<EventDetails> eventList = new ArrayList<>();
+        if (eventRedisRepo.count() >= 1) {
+            eventList = (List<EventDetails>) eventRedisRepo.findAll();
+            List<EventDetails> filteredList = eventList.stream().filter(e -> e.getDays().equals("multiple"))
+                    .collect(Collectors.toList());
+            eventList = filteredList;
+            logger.log(Level.INFO,
+                    String.format("Retrieved %d multiple day events from REDIS", filteredList.size()));
+        } else {
+            eventList = eventRepo.getEvents(SQL_GET_ALL_MULTIPLE_DAY_EVENT);
+            logger.log(Level.INFO,
+                    String.format("Retrieved %d multiple day events from MYSQL", eventList.size()));
+            eventList.forEach(e -> eventRedisRepo.save(e));
+
+        }
+        return eventList;
+    }
 
     public int insertEvent(EventDetails event) throws Exception {
         int updated = 0;
@@ -74,6 +137,12 @@ public class EventService {
                     event.getCapacity(),
                     event.getImage());
         }
+        if (updated >= 1) {
+            logger.log(Level.INFO, "Event added.");
+            EventDetails savedEvent = eventRepo.getLatestEventByTitle(event.getTitle());
+            eventRedisRepo.save(savedEvent);
+        }
+
         return updated;
     }
 
@@ -99,87 +168,45 @@ public class EventService {
             update.setString(6, event.getEndDate());
             update.setString(7, "N/A");
             update.setString(8, "N/A");
-            // updated = template.update(SQL_UPDATE_EVENT_BY_ID,
-            // event.getTitle(),
-            // event.getDescription(),
-            // event.getStartDate(),
-            // event.getDays(),
-            // event.getStartDate(),
-            // event.getEndDate(),
-            // "N/A",
-            // "N/A",
-            // event.getPrice(),
-            // event.getCapacity(),
-            // event.getImage(),
-            // event.getId());
         } else {
             update.setString(3, event.getDate());
             update.setString(5, "N/A");
             update.setString(6, "N/A");
             update.setString(7, event.getStartTime());
             update.setString(8, event.getEndTime());
-            // updated = template.update(SQL_UPDATE_EVENT_BY_ID,
-            // event.getTitle(),
-            // event.getDescription(),
-            // event.getDate(),
-            // event.getDays(),
-            // "N/A",
-            // "N/A",
-            // event.getStartTime(),
-            // event.getEndTime(),
-            // event.getPrice(),
-            // event.getCapacity(),
-            // event.getImage(),
-            // event.getId());
         }
         updated = update.executeUpdate();
+        if (updated >= 1) {
+            logger.log(Level.INFO, "Event Edited.");
+            eventRedisRepo.deleteById(event.getId());
+            eventRedisRepo.save(event);
+        }
         return updated;
     }
 
-    public List<EventDetails> getAllSingleEvent() throws Exception {
-        List<EventDetails> eventList = eventRepo.getEvents(SQL_GET_ALL_SINGLE_DAY_EVENT);
-        return eventList;
+    public boolean deleteEvent(Integer id) {
+        int deleted = eventRepo.deleteBookingsByEventId(id);
+        logger.log(Level.INFO, String.format("%d bookings deleted for Event ID: %d", deleted, id));
+        if (eventRepo.deleteEvents(id) >= 1) {
+            eventRedisRepo.deleteById(id);
+            return true;
+        } else {
+            return false;
+        }
     }
 
-    // public Optional<byte[]> getImageById(Integer id) {
-    // return template.query(SQL_GET_IMAGE_BY_ID,
-    // (ResultSet rs) -> {
-    // if (!rs.next())
-    // return Optional.empty();
-    // return Optional.of(rs.getBytes("image"));
-    // },
-    // id);
-    // }
+    // Event Bookings Methods
 
-    public List<EventDetails> getAllMultipleEvent() throws Exception {
-        List<EventDetails> eventList = eventRepo.getEvents(SQL_GET_ALL_MULTIPLE_DAY_EVENT);
-        return eventList;
+    public boolean bookingExists(Integer userId, Integer eventId) {
+        return eventRepo.getBookingCountByUserAndEvent(userId, eventId) > 0;
     }
 
-    public List<EventDetails> getAllEvents() throws Exception {
-        List<EventDetails> eventList = eventRepo.getEvents(SQL_GET_ALL_EVENTS);
-        return eventList;
+    public Integer getBookingCount(Integer eventId) {
+        return eventRepo.getBookingCount(eventId);
     }
 
     public List<EventBooking> getAllBookings(Integer userId) throws Exception {
         return eventRepo.getBookingsByUserId(userId);
-    }
-
-    @Transactional
-    public boolean deleteEvent(Integer id) {
-        int deleted = eventRepo.deleteBookingsByEventId(id);
-        if (deleted >= 1) {
-            return eventRepo.deleteEvents(id) >= 1;
-        }
-        return deleted >= 1;
-    }
-
-    public boolean deleteBooking(String bookingId) {
-        return eventRepo.deleteBookingByBookingId(bookingId) >= 1;
-    }
-
-    public EventDetails getEvent(Integer id) throws Exception {
-        return eventRepo.getEventById(id);
     }
 
     public String addEventBooking(Integer userId, Integer eventId, String bookingId) throws Exception {
@@ -200,18 +227,14 @@ public class EventService {
         }
     }
 
-    public boolean bookingExists(Integer userId, Integer eventId) {
-        return eventRepo.getBookingCountByUserAndEvent(userId, eventId) > 0;
-    }
-
-    public Integer getBookingCount(Integer eventId) {
-        return eventRepo.getBookingCount(eventId);
+    public boolean deleteBooking(String bookingId) {
+        return eventRepo.deleteBookingByBookingId(bookingId) >= 1;
     }
 
     public EventBooking getBookingByBookingId(String bookingId) throws Exception {
         Optional<EventBooking> opt = eventRepo.getBookingById(bookingId);
-        if (opt.isEmpty()){
-            throw new Exception(String.format("No booking found with booking id %s",bookingId));
+        if (opt.isEmpty()) {
+            throw new Exception(String.format("No booking found with booking id %s", bookingId));
         } else {
             return opt.get();
         }

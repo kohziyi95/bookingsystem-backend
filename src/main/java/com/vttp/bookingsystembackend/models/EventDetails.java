@@ -1,17 +1,22 @@
 package com.vttp.bookingsystembackend.models;
 
+import java.io.Serializable;
 import java.io.StringReader;
 
 import org.apache.tomcat.util.codec.binary.Base64;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.vttp.bookingsystembackend.services.EventService;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import jakarta.json.JsonReader;
 
-public class EventDetails {
+public class EventDetails implements Serializable {
+
     private Integer id;
     private String title;
     private String description;
@@ -25,8 +30,6 @@ public class EventDetails {
     private Integer capacity;
     private byte[] image;
     private Integer bookingCount;
-
-
 
     public static EventDetails createEvent(String json) {
         JsonReader reader = Json.createReader(new StringReader(json));
@@ -72,7 +75,6 @@ public class EventDetails {
         try {
             e.setId(data.getInt("id"));
         } catch (Exception ex) {
-            // TODO: handle exception
             ex.getMessage();
         }
         e.setTitle(data.getString("title"));
@@ -110,8 +112,10 @@ public class EventDetails {
                 .add("days", days)
                 .add("price", price)
                 .add("capacity", capacity)
-                .add("image", Base64.encodeBase64String(image))
-                .add("bookingCount", bookingCount);
+                .add("image", Base64.encodeBase64String(image));
+        if (this.bookingCount != null) {
+            builder.add("bookingCount", bookingCount);
+        }
         if (this.id != null) {
             builder.add("id", id);
         }
@@ -125,7 +129,6 @@ public class EventDetails {
         }
         return builder.build();
     }
-
 
     public Integer getId() {
         return id;
