@@ -35,6 +35,9 @@ public class EventService {
     @Autowired
     private EventRepository eventRepo;
 
+    @Autowired
+    private TransactionService transactionService;
+
     private static final String SQL_INSERT_EVENT = "insert into events(title, description, date, days, startDate, endDate, startTime, endTime, price, capacity, image) values (?,?,?,?,?,?,?,?,?,?,?)";
     private static final String SQL_GET_ALL_SINGLE_DAY_EVENT = "select * from events where days = 'single'";
     private static final String SQL_GET_ALL_MULTIPLE_DAY_EVENT = "select * from events where days = 'multiple'";
@@ -171,7 +174,7 @@ public class EventService {
         return deleted >= 1;
     }
 
-    public boolean deleteBooking(String bookingId){
+    public boolean deleteBooking(String bookingId) {
         return eventRepo.deleteBookingByBookingId(bookingId) >= 1;
     }
 
@@ -179,7 +182,7 @@ public class EventService {
         return eventRepo.getEventById(id);
     }
 
-    public String addEventBooking(Integer userId, Integer eventId) throws Exception {
+    public String addEventBooking(Integer userId, Integer eventId, String bookingId) throws Exception {
         Integer eventCapacity = eventRepo.getEventCapacity(eventId);
         Integer bookingCount = eventRepo.getBookingCount(eventId);
         Integer remainingCapacity = eventCapacity - bookingCount;
@@ -188,7 +191,6 @@ public class EventService {
         } else if (bookingExists(userId, eventId)) {
             throw new Exception("Booking already exists.");
         } else {
-            String bookingId = UUID.randomUUID().toString().substring(0, 8);
             logger.log(Level.INFO, "Booking ID: " + bookingId);
             if (eventRepo.insertEventBooking(bookingId, userId, eventId) > 0) {
                 return bookingId;
@@ -204,6 +206,15 @@ public class EventService {
 
     public Integer getBookingCount(Integer eventId) {
         return eventRepo.getBookingCount(eventId);
+    }
+
+    public EventBooking getBookingByBookingId(String bookingId) throws Exception {
+        Optional<EventBooking> opt = eventRepo.getBookingById(bookingId);
+        if (opt.isEmpty()){
+            throw new Exception(String.format("No booking found with booking id %s",bookingId));
+        } else {
+            return opt.get();
+        }
     }
 
 }

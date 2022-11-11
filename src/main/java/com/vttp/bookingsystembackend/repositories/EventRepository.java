@@ -25,12 +25,15 @@ public class EventRepository {
     public static final String SQL_GET_IMAGE_BY_ID = "select image from events where id = ?";
     public static final String SQL_DELETE_EVENT_BY_ID = "delete from events where id = ?";
     public static final String SQL_GET_EVENT_BY_ID = "select * from events where id = ?";
+    public static final String SQL_GET_EVENT_CAPACITY = "select capacity from events where id = ?";
+    public static final String SQL_GET_EVENT_BY_BOOKING_ID = "select * from event_bookings join events on event_bookings.event_id = events.id where booking_id = ?";
+    
     public static final String SQL_INSERT_BOOKING = "insert into event_bookings(booking_id, user_id, event_id) values (? ,? ,?)";
     public static final String SQL_GET_BOOKING_COUNT_BY_EVENT_ID = "select count(*) as count from event_bookings where event_id = ?";
-    public static final String SQL_GET_EVENT_CAPACITY = "select capacity from events where id = ?";
     public static final String SQL_GET_BOOKING_COUNT_BY_USER_ID_AND_EVENT_ID = "select count(*) as count from event_bookings where user_id = ? and event_id = ? ";
     public static final String SQL_DELETE_BOOKINGS_BY_EVENT_ID = "delete from event_bookings where event_id = ?";
     public static final String SQL_GET_BOOKINGS_BY_USER_ID = "select * from event_bookings where user_id = ?";
+    public static final String SQL_GET_BOOKING_BY_BOOKING_ID = "select * from event_bookings where booking_id = ?";
     public static final String SQL_DELETE_BOOKINGS_BY_BOOKING_ID = "delete from event_bookings where booking_id = ?";
 
     public List<EventDetails> getEvents(String SQL) throws Exception {
@@ -122,6 +125,16 @@ public class EventRepository {
             count = rowSet.getInt("count");
         }
         return count;
+    }
+
+    public Optional<EventBooking> getBookingById(String bookingId) {
+        EventBooking eventBooking = new EventBooking();
+        SqlRowSet rowSet = template.queryForRowSet(SQL_GET_BOOKING_BY_BOOKING_ID, bookingId);
+        while (rowSet.next()) {
+            eventBooking = EventBooking.createEvent(rowSet);
+            return Optional.of(eventBooking);
+        }
+        return Optional.empty();
     }
 
     public Integer deleteBookingsByEventId(Integer eventId) {

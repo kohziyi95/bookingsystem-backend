@@ -6,6 +6,7 @@ import java.util.ArrayList;
 // import java.util.HashMap;
 // import java.util.Map;
 import java.util.List;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -26,7 +27,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.vttp.bookingsystembackend.models.EventBooking;
 import com.vttp.bookingsystembackend.models.EventDetails;
+import com.vttp.bookingsystembackend.models.Transaction;
 import com.vttp.bookingsystembackend.services.EventService;
+import com.vttp.bookingsystembackend.services.TransactionService;
 
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
@@ -40,6 +43,9 @@ public class PublicController {
 
     @Autowired
     private EventService eventSvc;
+
+    @Autowired
+    private TransactionService transactionService;
 
     @GetMapping("/event/{id}")
     public ResponseEntity<String> getEventById(@PathVariable Integer id) {
@@ -62,7 +68,6 @@ public class PublicController {
         try {
             eventList = eventSvc.getAllSingleEvent();
         } catch (Exception e1) {
-            // TODO Auto-generated catch block
             e1.printStackTrace();
         }
         JsonArrayBuilder builder = Json.createArrayBuilder();
@@ -80,7 +85,6 @@ public class PublicController {
         try {
             eventList = eventSvc.getAllEvents();
         } catch (Exception e1) {
-            // TODO Auto-generated catch block
             e1.printStackTrace();
         }
         JsonArrayBuilder builder = Json.createArrayBuilder();
@@ -97,7 +101,6 @@ public class PublicController {
         try {
             eventList = eventSvc.getAllMultipleEvent();
         } catch (Exception e1) {
-            // TODO Auto-generated catch block
             e1.printStackTrace();
         }
         JsonArrayBuilder builder = Json.createArrayBuilder();
@@ -110,28 +113,85 @@ public class PublicController {
 
     @PostMapping("/event/{eventId}/book")
     public ResponseEntity<String> bookEvent(@PathVariable Integer eventId, @RequestBody String payload) {
-        String bookingId = "";
         JsonObject data = Json.createReader(new StringReader(payload)).readObject();
         Integer userId = data.getInt("userId");
-        logger.log(Level.INFO, "Creating booking for eventId: " + eventId + " and userId: " + userId);
+        String bookingId = UUID.randomUUID().toString().substring(0, 8);
+        Float amount = -999999999f;
         try {
-            bookingId = eventSvc.addEventBooking(userId, eventId);
-            return ResponseEntity.ok(bookingId);
-        } catch (Exception e) {
-            // e.printStackTrace();
-            logger.log(Level.WARNING, e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
+            amount = eventSvc.getEvent(eventId).getPrice();
+            Transaction t = new Transaction();
+            if (amount >= 0) {
+                t = Transaction.createOutgoingTransaction(userId, amount, bookingId,
+                        transactionService.getCredits(userId));
+                try {
+                    if (transactionService.addTransaction(t)) {
+                        logger.log(Level.INFO, "Creating booking for eventId: " + eventId + " and userId: " + userId);
+                        logger.log(Level.INFO, String.format("Deducting $%f from user %d", amount, userId));
+
+                        try {
+                            bookingId = eventSvc.addEventBooking(userId, eventId, bookingId);
+                            JsonObject response = Json.createObjectBuilder()
+                                    .add("statusCode", 200)
+                                    .add("transactionId", t.getTransactionId())
+                                    .add("newCredit", t.getTotalCredits())
+                                    .add("bookingId", bookingId)
+                                    .build();
+                            return ResponseEntity.ok(response.toString());
+                        } catch (Exception e) {
+                            // e.printStackTrace();
+                            logger.log(Level.WARNING, e.getMessage());
+                            logger.log(Level.WARNING,
+                                    "Failed to create booking for eventId: " + eventId + " and userId: " + userId);
+                            JsonObject response = Json.createObjectBuilder()
+                                    .add("statusCode", 400)
+                                    .add("message",
+                                            "Failed to create booking for eventId: " + eventId + " and userId: "
+                                                    + userId)
+                                    .build();
+                            return ResponseEntity.badRequest().body(response.toString());
+                            // return ResponseEntity.badRequest().body(e.getMessage());
+                        }
+
+                    } else {
+                        JsonObject response = Json.createObjectBuilder()
+                                .add("statusCode", 400)
+                                .add("message", "Transaction Failed.")
+                                .build();
+                        return ResponseEntity.badRequest().body(response.toString());
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    JsonObject response = Json.createObjectBuilder()
+                            .add("statusCode", 400)
+                            .add("message", e.getMessage())
+                            .build();
+                    return ResponseEntity.badRequest().body(response.toString());
+                }
+            }
+        } catch (Exception e1) {
+            logger.log(Level.WARNING, e1.getMessage());
+            e1.printStackTrace();
+            JsonObject response = Json.createObjectBuilder()
+                    .add("statusCode", 400)
+                    .add("message", "Unable to retrieve event details.")
+                    .build();
+            return ResponseEntity.badRequest().body(response.toString());
         }
+        JsonObject response = Json.createObjectBuilder()
+                .add("statusCode", 400)
+                .add("message", "Unknown error.")
+                .build();
+        return ResponseEntity.badRequest().body(response.toString());
     }
 
     @GetMapping("/event/{eventId}/count")
-    public ResponseEntity<Integer> getBookingCount (@PathVariable Integer eventId) {
+    public ResponseEntity<Integer> getBookingCount(@PathVariable Integer eventId) {
         Integer bookingCount = eventSvc.getBookingCount(eventId);
         return ResponseEntity.ok(bookingCount);
     }
 
     @GetMapping("/event/bookings/user/{userId}")
-    public ResponseEntity<String> getBookingsByUser (@PathVariable Integer userId){
+    public ResponseEntity<String> getBookingsByUser(@PathVariable Integer userId) {
         try {
             List<EventBooking> bookingList = eventSvc.getAllBookings(userId);
             JsonArrayBuilder builder = Json.createArrayBuilder();
@@ -148,12 +208,60 @@ public class PublicController {
     }
 
     @DeleteMapping("/event/bookings/{bookingId}")
-    public ResponseEntity<String> deleteBooking (@PathVariable String bookingId){
+    public ResponseEntity<String> deleteBooking(@PathVariable String bookingId) {
         logger.log(Level.INFO, "Deleting Booking Id >>>>> " + bookingId);
-        if (eventSvc.deleteBooking(bookingId)) {
-            return ResponseEntity.ok(bookingId);
-        } else {
-            return ResponseEntity.badRequest().body("Error. Failed to delete event.");
+
+        EventBooking bookingDetails;
+        EventDetails e;
+        try {
+            bookingDetails = eventSvc.getBookingByBookingId(bookingId);
+            try {
+                e = eventSvc.getEvent(bookingDetails.getEventId());
+                Float previousCredits = transactionService.getCredits(bookingDetails.getUserId());
+                Transaction t = Transaction.createIncomingTransaction(bookingDetails.getUserId(), e.getPrice(),
+                        previousCredits);
+                t.setIncomingDescription(String.format("Refund for cancellation of booking Id: %s", bookingId));
+                if (transactionService.addTransaction(t)) {
+                    if (eventSvc.deleteBooking(bookingId)) {
+
+                        JsonObject response = Json.createObjectBuilder()
+                                .add("statusCode", 200)
+                                .add("transactionId", t.getTransactionId())
+                                .add("newCredit", t.getTotalCredits())
+                                .build();
+                        return ResponseEntity.ok(response.toString());
+                    } else {
+                        JsonObject response = Json.createObjectBuilder()
+                                .add("statusCode", 400)
+                                .add("message", "Error. Failed to delete event.")
+                                .build();
+                        return ResponseEntity.badRequest().body(response.toString());
+                    }
+                } else {
+                    JsonObject response = Json.createObjectBuilder()
+                            .add("statusCode", 400)
+                            .add("message", "Transaction Failed. Unable to update your balance.")
+                            .build();
+                    return ResponseEntity.badRequest().body(response.toString());
+                }
+
+            } catch (Exception e1) {
+                e1.printStackTrace();
+                JsonObject response = Json.createObjectBuilder()
+                        .add("statusCode", 400)
+                        .add("message", "Unable to retrieve booking details.")
+                        .build();
+                return ResponseEntity.badRequest().body(response.toString());
+
+            }
+        } catch (Exception e1) {
+            e1.printStackTrace();
+            JsonObject response = Json.createObjectBuilder()
+                    .add("statusCode", 400)
+                    .add("message", "Unable to retrieve event details.")
+                    .build();
+            return ResponseEntity.badRequest().body(response.toString());
         }
+
     }
 }
