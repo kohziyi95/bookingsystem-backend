@@ -6,6 +6,8 @@ import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +22,7 @@ import com.vttp.bookingsystembackend.services.TransactionService;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
+@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/transaction")
 public class TransactionController {
@@ -31,6 +34,7 @@ public class TransactionController {
     @GetMapping("/credits/{userId}")
     public ResponseEntity<String> getCredits(@PathVariable Integer userId) {
         Float credits = transactionService.getCredits(userId);
+        System.out.println(credits);
         logger.log(Level.INFO, String.format("UserId >>> %s and Credits >>> %s", userId, credits));
         JsonObject obj = Json.createObjectBuilder().add("credits", credits).build();
         return ResponseEntity.ok(obj.toString());
