@@ -8,6 +8,9 @@ import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+
 @Entity
 @Table(name = "users", uniqueConstraints = {
         @UniqueConstraint(columnNames = "username"),
@@ -42,6 +45,14 @@ public class User {
         this.username = username;
         this.email = email;
         this.password = password;
+    }
+
+    public JsonObject toJson() {
+        return Json.createObjectBuilder()
+                .add("id", this.id)
+                .add("username", this.username)
+                .add("email", this.email)
+                .build();
     }
 
     public Long getId() {

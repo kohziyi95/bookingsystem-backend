@@ -23,7 +23,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.vttp.bookingsystembackend.models.EventDetails;
+import com.vttp.bookingsystembackend.models.User;
 import com.vttp.bookingsystembackend.services.EventService;
+import com.vttp.bookingsystembackend.services.UserDetailsServiceImpl;
 
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
@@ -38,6 +40,9 @@ public class AdminController {
 
     @Autowired
     private EventService eventSvc;
+
+    @Autowired
+    private UserDetailsServiceImpl userSvc;
 
     @PostMapping(path = "/addEvent", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
@@ -161,6 +166,21 @@ public class AdminController {
         } else {
             return ResponseEntity.badRequest().body("Error. Failed to delete event.");
         }
+    }
+
+    @GetMapping("/user/{id}")
+    public ResponseEntity<String> getUserById(@PathVariable Integer id) {
+        User user = new User();
+        System.out.println("Getting User Id: " + id);
+
+        try {
+            user = userSvc.getUserById(Long.valueOf(id));
+            logger.log(Level.INFO, "User >>>> " + user.getUsername());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Failed to get event.");
+        }
+        return ResponseEntity.ok(user.toJson().toString());
     }
 }
 

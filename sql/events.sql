@@ -13,7 +13,7 @@ endTime varchar(10),
 image mediumblob,
 price float,
 capacity int,
-date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 

@@ -34,6 +34,7 @@ public class EventRepository {
     public static final String SQL_GET_BOOKING_COUNT_BY_USER_ID_AND_EVENT_ID = "select count(*) as count from event_bookings where user_id = ? and event_id = ? ";
     public static final String SQL_DELETE_BOOKINGS_BY_EVENT_ID = "delete from event_bookings where event_id = ?";
     public static final String SQL_GET_BOOKINGS_BY_USER_ID = "select * from event_bookings where user_id = ?";
+    public static final String SQL_GET_BOOKINGS_BY_EVENT_ID = "select * from event_bookings where event_id = ?";
     public static final String SQL_GET_BOOKING_BY_BOOKING_ID = "select * from event_bookings where booking_id = ?";
     public static final String SQL_DELETE_BOOKINGS_BY_BOOKING_ID = "delete from event_bookings where booking_id = ?";
 
@@ -51,15 +52,7 @@ public class EventRepository {
         return eventList;
     }
 
-    public List<EventBooking> getBookingsByUserId(Integer userId) throws Exception {
-        List<EventBooking> bookingList = new ArrayList<>();
-        SqlRowSet rowSet = template.queryForRowSet(SQL_GET_BOOKINGS_BY_USER_ID, userId);
-        while (rowSet.next()) {
-            EventBooking booking = EventBooking.createEvent(rowSet);
-            bookingList.add(booking);
-        }
-        return bookingList;
-    }
+
 
     public Optional<byte[]> getImageById(Integer id) throws Exception {
         return template.query(SQL_GET_IMAGE_BY_ID,
@@ -97,6 +90,15 @@ public class EventRepository {
         return event;
     }
 
+    public Integer getEventCapacity(Integer eventId) {
+        Integer capacity = 0;
+        SqlRowSet rowSet = template.queryForRowSet(SQL_GET_EVENT_CAPACITY, eventId);
+        while (rowSet.next()) {
+            capacity = rowSet.getInt("capacity");
+        }
+        return capacity;
+    }
+
     public EventDetails getLatestEventByTitle(String title) throws Exception {
         // EventDetails e = template.queryForObject(SQL_GET_EVENT_BY_ID,
         // EventDetails.class);
@@ -132,14 +134,28 @@ public class EventRepository {
         return count;
     }
 
-    public Integer getEventCapacity(Integer eventId) {
-        Integer capacity = 0;
-        SqlRowSet rowSet = template.queryForRowSet(SQL_GET_EVENT_CAPACITY, eventId);
+    public List<EventBooking> getBookingsByUserId(Integer userId) throws Exception {
+        List<EventBooking> bookingList = new ArrayList<>();
+        SqlRowSet rowSet = template.queryForRowSet(SQL_GET_BOOKINGS_BY_USER_ID, userId);
         while (rowSet.next()) {
-            capacity = rowSet.getInt("capacity");
+            EventBooking booking = EventBooking.createEvent(rowSet);
+            bookingList.add(booking);
         }
-        return capacity;
+        return bookingList;
     }
+
+    
+    public List<EventBooking> getBookingsByEventId(Integer eventId) throws Exception {
+        List<EventBooking> bookingList = new ArrayList<>();
+        SqlRowSet rowSet = template.queryForRowSet(SQL_GET_BOOKINGS_BY_EVENT_ID, eventId);
+        while (rowSet.next()) {
+            EventBooking booking = EventBooking.createEvent(rowSet);
+            bookingList.add(booking);
+        }
+        logger.log(Level.INFO, bookingList.toString());
+        return bookingList;
+    }
+
 
     public Integer getBookingCountByUserAndEvent(Integer userId, Integer eventId) {
         Integer count = 0;

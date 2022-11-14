@@ -211,6 +211,22 @@ public class PublicController {
         }
     }
 
+    @GetMapping("/event/bookings/event/{eventId}")
+    public ResponseEntity<String> getBookingsByEvent(@PathVariable Integer eventId) {
+        try {
+            List<EventBooking> bookingList = eventSvc.getAllBookingsByEvent(eventId);
+            JsonArrayBuilder builder = Json.createArrayBuilder();
+            bookingList.forEach(e -> {
+                builder.add(e.toJson());
+            });
+            return ResponseEntity.ok(builder.build().toString());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @DeleteMapping("/event/bookings/{bookingId}")
     public ResponseEntity<String> deleteBooking(@PathVariable String bookingId) {
         logger.log(Level.INFO, "Deleting Booking Id >>>>> " + bookingId);

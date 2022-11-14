@@ -11,10 +11,10 @@ CREATE TABLE user_transactions (
     foreign key (user_id) references users(id)
 ) 
 
-CREATE TABLE user_wallet (
-    wallet_id int auto_increment,
-    user_id bigint NOT NULL,
-    credits float,
-    PRIMARY KEY (wallet_id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-)
+-- CREATE TABLE user_wallet (
+--     wallet_id int auto_increment,
+--     user_id bigint NOT NULL,
+--     credits float,
+--     PRIMARY KEY (wallet_id),
+--     FOREIGN KEY (user_id) REFERENCES users(id)
+-- )

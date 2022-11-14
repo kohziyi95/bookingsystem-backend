@@ -209,6 +209,10 @@ public class EventService {
         return eventRepo.getBookingsByUserId(userId);
     }
 
+    public List<EventBooking> getAllBookingsByEvent(Integer eventId) throws Exception {
+        return eventRepo.getBookingsByEventId(eventId);
+    }
+
     public String addEventBooking(Integer userId, Integer eventId, String bookingId) throws Exception {
         Integer eventCapacity = eventRepo.getEventCapacity(eventId);
         Integer bookingCount = eventRepo.getBookingCount(eventId);
